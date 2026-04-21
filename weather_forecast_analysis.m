@@ -5,6 +5,17 @@ clc; clear; close all;
 % =========================
 filename = 'open-meteo-40.88N73.36W4m.csv';
 
+% Allow selecting a CSV if the default file is not found.
+if ~isfile(filename)
+    [selectedFile, selectedPath] = uigetfile({'*.csv', 'CSV Files (*.csv)'}, ...
+        'Select weather CSV file');
+    if isequal(selectedFile, 0)
+        error(['CSV file not found and no file selected. ', ...
+            'Place your CSV near this script or select it in the dialog.']);
+    end
+    filename = fullfile(selectedPath, selectedFile);
+end
+
 opts = detectImportOptions(filename);
 opts.DataLines = [3 Inf];   % Skip metadata rows
 T = readtable(filename, opts);

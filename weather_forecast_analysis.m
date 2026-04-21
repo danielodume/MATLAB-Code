@@ -22,7 +22,50 @@ if ~any(time_idx)
 end
 
 time_raw = T{:, find(time_idx, 1, 'first')};
-time = datetime(string(time_raw), 'TimeZone', 'UTC');
+if isdatetime(time_raw)
+    time = time_raw;
+    if isempty(time.TimeZone)
+        time.TimeZone = 'UTC';
+    else
+        time = datetime(time, 'TimeZone', 'UTC');
+    end
+else
+    time_str = strtrim(string(time_raw));
+    parseFormats = [ ...
+        "yyyy-MM-dd'T'HH:mm", ...
+        "yyyy-MM-dd'T'HH:mm:ss", ...
+        "yyyy-MM-dd HH:mm", ...
+        "yyyy-MM-dd HH:mm:ss", ...
+        "yyyy-MM-dd'T'HH:mmXXX", ...
+        "yyyy-MM-dd'T'HH:mm:ssXXX", ...
+        "yyyy-MM-dd'T'HH:mm'Z'", ...
+        "yyyy-MM-dd'T'HH:mm:ss'Z'" ...
+    ];
+
+    time = NaT(size(time_str));
+    parsed = false;
+
+    for iFmt = 1:numel(parseFormats)
+        try
+            tTry = datetime(time_str, 'InputFormat', parseFormats(iFmt), 'TimeZone', 'UTC');
+            if all(~isnat(tTry))
+                time = tTry;
+                parsed = true;
+                break;
+            end
+        catch
+            % Try next format.
+        end
+    end
+
+    if ~parsed
+        % Last resort: auto parser.
+        time = datetime(time_str, 'TimeZone', 'UTC');
+        if any(isnat(time))
+            error('Unable to parse the time column. Check CSV time format.');
+        end
+    end
+end
 
 % ---- Temperature column ----
 temp_idx = contains(vars, 'temperature', 'IgnoreCase', true);
